@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, simpledialog
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 import sys
@@ -13,6 +13,7 @@ from calculadoras.fgts_calculator import CalculadoraFGTS
 from calculadoras.icms_calculator import CalculadoraICMS
 from validadores.febraban_validator import FebrabanValidator
 from servicos.history_service import HistoryService
+from servicos.license_service import LicenseService
 from extratores.pdf_extractor import ExtratorGuiaPDF
 from relatorios.pdf_generator import GeradorRelatorioPDF
 
@@ -27,6 +28,13 @@ except ImportError:
 class MainApp:
     def __init__(self, root):
         self.root = root
+        
+        # ✅ VALIDAR LICENÇA PRIMEIRO
+        self.license_service = LicenseService()
+        
+        if not self._validar_licenca_inicial():
+            sys.exit(0)
+            
         self.root.title("Recálculo de Guias - FASE 3")
         self.root.geometry("700x850")
         
@@ -44,6 +52,7 @@ class MainApp:
         
         self.history_service = HistoryService()
         self.create_widgets()
+        self.create_menu()
         
         self.calc_inss = CalculadoraINSS()
         self.calc_fgts = CalculadoraFGTS()
@@ -54,6 +63,119 @@ class MainApp:
         
         self.status_var.set("Pronto.")
         self.refresh_history()
+
+    def create_menu(self):
+        # Criar menubar
+        menubar = tk.Menu(self.root)
+
+        # Menu Licença
+        menu_licenca = tk.Menu(menubar, tearoff=0)
+        menu_licenca.add_command(label="Ver Licença", command=self.ver_info_licenca)
+        menu_licenca.add_command(label="Trocar Chave", command=self.trocar_licenca)
+        menubar.add_cascade(label="Licença", menu=menu_licenca)
+
+        self.root.config(menu=menubar)
+
+    def _validar_licenca_inicial(self) -> bool:
+        """Valida licença ao iniciar"""
+        chave_salva = self.license_service.obter_chave_salva()
+        
+        if chave_salva:
+            # Validar silenciosamente se possível, ou mostrar loading? 
+            # O código original valida online direto (bloqueante)
+            resultado = self.license_service.validar_online(chave_salva)
+            
+            if resultado['valida']:
+                if not resultado.get('online'):
+                    dias = resultado.get('dias_offline_restantes', 0)
+                    print(f"⚠️  Modo offline - {dias} dias restantes")
+                return True
+            else:
+                messagebox.showerror(
+                    "Licença Inválida",
+                    f"{resultado['mensagem']}\n\nInsira uma nova chave."
+                )
+        
+        return self._solicitar_chave_usuario()
+
+    def _solicitar_chave_usuario(self) -> bool:
+        """Dialog de ativação"""
+        # Se self.root já existe e está visível, usar ele?
+        # A instrução manda criar root_temp. Mas como já temos self.root (mesmo que vazio), 
+        # criar outro Tk() pode dar erro. Vamos tentar usar um Toplevel ou withdraw o root principal se não quisermos mostrar.
+        # Vou seguir a instrução USER mas usar Toplevel se root já existir, ou seguir a risca.
+        # User diz: root_temp = tk.Tk(); root_temp.withdraw()
+        # Isso cria uma segunda instância da Tk. Geralmente não recomendado, mas vou seguir o snippet para garantir comportamento isolado
+        # se o init ainda não mostrou a janela principal.
+        
+        # Mas atenção: self.root já foi criado fora.
+        # Melhor usar self.root oculto se necessário, ou usar parent=self.root
+        
+        # Vou adaptar para usar self.root como parent já que ele foi passado no init
+        
+        while True:
+            chave = simpledialog.askstring(
+                "Ativação de Licença",
+                "Insira sua chave de licença:\n(Formato: XXXX-XXXX-XXXX-XXXX)",
+                parent=self.root
+            )
+            
+            if not chave:
+                resposta = messagebox.askyesno(
+                    "Sair",
+                    "Sem licença, o programa será encerrado.\nSair?",
+                    parent=self.root
+                )
+                if resposta:
+                    return False
+                continue
+            
+            resultado = self.license_service.validar_online(chave)
+            
+            if resultado['valida']:
+                messagebox.showinfo(
+                    "Sucesso",
+                    f"Licença ativada!\n\nCliente: {resultado.get('cliente_nome', 'N/A')}",
+                    parent=self.root
+                )
+                return True
+            else:
+                messagebox.showerror(
+                    "Erro",
+                    f"Licença inválida:\n{resultado['mensagem']}",
+                    parent=self.root
+                )
+
+    def ver_info_licenca(self):
+        """Menu: Ver informações da licença"""
+        chave = self.license_service.obter_chave_salva()
+        if not chave:
+            messagebox.showinfo("Licença", "Nenhuma licença ativa")
+            return
+        
+        resultado = self.license_service.validar_online(chave)
+        
+        status = "✅ ATIVA" if resultado['valida'] else "❌ INVÁLIDA"
+        modo = "🌐 Online" if resultado.get('online') else f"📴 Offline ({resultado.get('dias_offline_restantes', 0)} dias)"
+        
+        info = f"""
+Chave: {chave}
+Status: {status}
+Cliente: {resultado.get('cliente_nome', 'N/A')}
+Modo: {modo}
+
+Hardware ID: {self.license_service.hardware_id[:16]}...
+        """
+        
+        messagebox.showinfo("Licença", info.strip())
+
+    def trocar_licenca(self):
+        """Menu: Trocar chave de licença"""
+        if self._solicitar_chave_usuario():
+            messagebox.showinfo("Sucesso", "Licença atualizada!")
+            # Reiniciar app ou fechar
+            self.root.destroy()
+            os.execv(sys.executable, ['python'] + sys.argv)
 
     def create_widgets(self):
         # Container Principal

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Licenças</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 36px;
+            margin-bottom: 5px;
+        }
+        .form-criar {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+        .form-criar h3 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .form-group input {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        thead {
+            background: #f1f5f9;
+        }
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+        .status-ativo {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .status-bloqueado {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        .chave-licenca {
+            font-family: 'Courier New', monospace;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Gerenciamento de Licenças</h1>
+        <p class="subtitle">RecalGuias - Sistema de Controle de Acesso</p>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalLicencas">0</h3>
+                <p>Total de Licenças</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="licencasAtivas">0</h3>
+                <p>Licenças Ativas</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="licencasBloqueadas">0</h3>
+                <p>Licenças Bloqueadas</p>
+            </div>
+        </div>
+        
+        <div class="form-criar">
+            <h3>➕ Criar Nova Licença</h3>
+            <div class="form-group">
+                <input type="text" id="clienteNome" placeholder="Nome do Cliente *" style="width: 300px;">
+                <input type="email" id="clienteEmail" placeholder="Email (opcional)" style="width: 250px;">
+                <input type="number" id="diasValidade" placeholder="Dias (vazio = vitalícia)" style="width: 180px;">
+                <button class="btn btn-primary" onclick="criarLicenca()">Criar Licença</button>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Chave</th>
+                    <th>Cliente</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Último Acesso</th>
+                    <th>Acessos</th>
+                    <th>Expira</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="corpoTabela">
+                <tr><td colspan="8" class="loading">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div id="modalLogs" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitulo">Logs</h2>
+            <div id="modalConteudo"></div>
+            <br>
+            <button class="btn btn-primary" onclick="fecharModal()">Fechar</button>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = window.location.origin + '/api/admin';
+        
+        async function carregarLicencas() {
+            try {
+                const response = await fetch(`${API_URL}/listar`);
+                const data = await response.json();
+                renderizarLicencas(data.licencas);
+                atualizarStats(data.licencas);
+            } catch (error) {
+                document.getElementById('corpoTabela').innerHTML = 
+                    '<tr><td colspan="8" style="color: red; text-align: center;">Erro ao carregar</td></tr>';
+            }
+        }
+        
+        function renderizarLicencas(licencas) {
+            const tbody = document.getElementById('corpoTabela');
+            
+            if (licencas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">Nenhuma licença criada</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            licencas.forEach(lic => {
+                const tr = document.createElement('tr');
+                const statusClass = lic.ativa ? 'status-ativo' : 'status-bloqueado';
+                const statusText = lic.ativa ? '✅ ATIVA' : '❌ BLOQUEADA';
+                const btnAcao = lic.ativa 
+                    ? `<button class="btn btn-danger" onclick="bloquear('${lic.chave_licenca}')">Bloquear</button>`
+                    : `<button class="btn btn-success" onclick="ativar('${lic.chave_licenca}')">Ativar</button>`;
+                
+                tr.innerHTML = `
+                    <td><span class="chave-licenca">${lic.chave_licenca}</span></td>
+                    <td><strong>${lic.cliente_nome}</strong></td>
+                    <td>${lic.cliente_email}</td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td>${lic.ultimo_acesso}</td>
+                    <td>${lic.total_acessos}</td>
+                    <td>${lic.data_expiracao}</td>
+                    <td>
+                        ${btnAcao}
+                        <button class="btn btn-info" onclick="verLogs('${lic.chave_licenca}')">Logs</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function atualizarStats(licencas) {
+            const total = licencas.length;
+            const ativas = licencas.filter(l => l.ativa).length;
+            document.getElementById('totalLicencas').textContent = total;
+            document.getElementById('licencasAtivas').textContent = ativas;
+            document.getElementById('licencasBloqueadas').textContent = total - ativas;
+        }
+        
+        async function criarLicenca() {
+            const nome = document.getElementById('clienteNome').value;
+            const email = document.getElementById('clienteEmail').value;
+            const dias = document.getElementById('diasValidade').value;
+            
+            if (!nome) {
+                alert('❌ Nome do cliente é obrigatório');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/criar_licenca`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        cliente_nome: nome,
+                        cliente_email: email,
+                        dias_validade: dias ? parseInt(dias) : null
+                    })
+                });
+                
+                const data = await response.json();
+                alert(`✅ Licença criada!\n\n🔑 CHAVE: ${data.chave_licenca}\n\nEnvie ao cliente ${nome}.`);
+                
+                document.getElementById('clienteNome').value = '';
+                document.getElementById('clienteEmail').value = '';
+                document.getElementById('diasValidade').value = '';
+                carregarLicencas();
+            } catch (error) {
+                alert('❌ Erro: ' + error);
+            }
+        }
+        
+        async function bloquear(chave) {
+            if (!confirm(`⚠️ Bloquear ${chave}?`)) return;
+            await fetch(`${API_URL}/bloquear/${chave}`, {method: 'POST'});
+            alert('✅ Bloqueada!');
+            carregarLicencas();
+        }
+        
+        async function ativar(chave) {
+            if (!confirm(`✅ Ativar ${chave}?`)) return;
+            await fetch(`${API_URL}/ativar/${chave}`, {method: 'POST'});
+            alert('✅ Ativada!');
+            carregarLicencas();
+        }
+        
+        async function verLogs(chave) {
+            try {
+                const response = await fetch(`${API_URL}/logs/${chave}`);
+                const data = await response.json();
+                document.getElementById('modalTitulo').textContent = `Logs - ${chave}`;
+                
+                if (data.logs.length === 0) {
+                    document.getElementById('modalConteudo').innerHTML = '<p>Sem logs</p>';
+                } else {
+                    let html = '<table style="width: 100%; font-size: 13px;"><tr><th>Data/Hora</th><th>IP</th><th>Status</th><th>Mensagem</th></tr>';
+                    data.logs.forEach(log => {
+                        html += `<tr>
+                            <td>${log.timestamp}</td>
+                            <td>${log.ip}</td>
+                            <td>${log.sucesso ? '✅' : '❌'}</td>
+                            <td>${log.mensagem}</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('modalConteudo').innerHTML = html;
+                }
+                
+                document.getElementById('modalLogs').style.display = 'block';
+            } catch (error) {
+                alert('Erro ao carregar logs');
+            }
+        }
+        
+        function fecharModal() {
+            document.getElementById('modalLogs').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('modalLogs')) {
+                fecharModal();
+            }
+        }
+        
+        carregarLicencas();
+        setInterval(carregarLicencas, 30000);
+    </script>
+</body>
+</html>
