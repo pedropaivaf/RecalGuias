@@ -16,11 +16,10 @@ class LicenseService:
     
     # ⚠️ CONFIGURAÇÃO - TROCAR ANTES DE COMPILAR
     # Desenvolvimento local:
-    API_URL = "http://localhost:5000/api"
+    # API_URL = "http://localhost:5000/api"
     
-    # Produção (descomentar após deploy):
-    # API_URL = "https://seuusuario.pythonanywhere.com/api"
-    # API_URL = "https://licencas.mbcontabilidade.com.br/api"
+    # Produção (PythonAnywhere):
+    API_URL = "https://pedropython.pythonanywhere.com/api"
     
     CACHE_FILE = Path("database/license_cache.json")
     CACHE_VALIDADE_DIAS = 7
