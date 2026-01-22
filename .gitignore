@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+dist/
+build/
+*.spec
+*.exe
+*.pkg
+*.msi
+*.app
+*.dmg
+*.iso
+
+# Database and Keys (Local only)
+local_data.db
+license.lic
+private_key.pem
+
+# Logs
+*.log
